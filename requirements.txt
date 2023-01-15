@@ -1,0 +1,5 @@
+disnake
+rapptz-asqlite
+pillow
+disnake-jishaku
+akinator.py
