@@ -206,7 +206,7 @@ class Cards(commands.Cog):
             description=
             f"🌸 **Group**: {data[card]['group']}\n🌼 **Card ID**: {card}\n🍃 **Owner**: {inter.author.mention}\n({rari})",
             color=self.bot.get_color())
-        emb.set_image(file=discord.File(f"./pics/{id}.png", "image.png"))
+        emb.set_image(url=f"https://haknyeon.info/topsecret/card?id={card.replace('#', 'h')}")
         emb.set_author(name=str(inter.author), icon_url=inter.author.avatar.url)
         await inter.send(embed=emb)
 
@@ -224,11 +224,11 @@ class Cards(commands.Cog):
                 description=
                     f"🌸 **Group**: {data[card]['group']}\n🌼 **Card ID**: {card}\n({rari})",
                 color=self.bot.get_color())
-            emb.set_image(file=discord.File(f"./pics/{card}.png", "image.png"))
+            emb.set_image(url=f"https://haknyeon.info/topsecret/card?id={card.replace('#', 'h')}")
             emb.set_author(name=str(inter.author), icon_url=inter.author.avatar.url) #type:ignore
             embs.append(emb)
             files.append(card)
-        v = Menu(embs, files=files)
+        v = Menu(embs)
         del embs
         del files
         v.inter = inter #type:ignore
@@ -253,7 +253,7 @@ class Cards(commands.Cog):
         copies = 0
         for card in r:
             if card[0].split(" ")[0] == card_id:
-                copies = card[0].split(" ")[1]
+                copies = int(card[0].split(" ")[1])
                 break
         if not copies:
             return await inter.send("You don't have that card in your inventory!", ephemeral=True)
@@ -278,7 +278,6 @@ class Cards(commands.Cog):
     async def search(self, inter, group:str, rarity:commands.Range[1, 5]=0):  #type: ignore
         ids = [id for id in self.bot.data.keys()]
         embeds = []
-        files = []
         for id in ids:
             if self.bot.data[id]["group"] == group:
               if rarity == self.bot.data[id]["rarity"] or rarity==0:
@@ -291,15 +290,13 @@ class Cards(commands.Cog):
                     f"🌸 **Group**: {data[card]['group']}\n🌼 **Card ID**: {card}\n({rari})",
                     color=self.bot.get_color())
                 emb.set_author(name=str(inter.author), icon_url=inter.author.avatar.url) #type:ignore
-                file=discord.File(f"pics/{id}.png", "image.png")
-                emb.set_image(url="attachment://image.png")
-                files.append(id)
+                emb.set_image(url=f"https://haknyeon.info/topsecret/card?id={card.replace('#', 'h')}")
                 embeds.append(emb)
         if len(embeds) == 0:
             return await inter.send("Nothing found...")
-        m_v = Menu(embeds, files=files)
+        m_v = Menu(embeds)
         m_v.inter = inter  #type:ignore
-        await inter.send(embed=embeds[0], view=m_v, file=discord.File(f"pics/{files[0]}.png"))
+        await inter.send(embed=embeds[0], view=m_v)
 
 
     @search.autocomplete("group")
@@ -396,7 +393,7 @@ class Cards(commands.Cog):
                 tick_cross.append(f"**{cd}** <:HN_Checkmark:1035085306346606602>\n")
             else:
                 tick_cross.append(f"**{cd}** <:HN_X:1035085573104345098>\n")
-        for id in range(0, len(tick_cross), 25):
+        for id in range(0, len(tick_cross), 10):
             nl = tick_cross[id:id+10]
             tc = "> " +'\n> '.join(nl)
             emb = discord.Embed(title=f"{group} Progress", description=f"{len(g_cards)}/{len(tg_cards)} Cards\n{progress[per]}\n\n{tc}", color=self.bot.get_color())

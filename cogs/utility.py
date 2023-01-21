@@ -41,7 +41,7 @@ class Utility(commands.Cog):
         emb.add_field(name="Total Cards", value=len(c))
         if r["fav_card"] != " " and r["fav_card"] in list(self.bot.data.keys()):
             emb.add_field(name="Favourite Card", value="\u200b", inline=False)
-            emb.set_image(file=discord.File("pics/" + r["fav_card"]+ ".png", "image.png"))
+            emb.set_image(url=f"https://haknyeon.info/topsecret/card?id={r['fav_card'].replace('#', 'h')}")
         else:
             emb.add_field(name="Favourite Card", value="No favourite card has been set.", inline=False)
         await inter.send(embed=emb)
@@ -133,6 +133,11 @@ class Utility(commands.Cog):
         emb.set_author(name=f"{inter.author}'s custom binder", icon_url=inter.author.avatar.url)
         emb.set_image(file=file)
         await inter.edit_original_message(embed=emb)
+        del emb
+        file.close()
+        r.close()
+        del r
+
 
     
     def create(self, q, w, e, r, t):
@@ -152,14 +157,10 @@ class Utility(commands.Cog):
         i3.close()
         i4.close()
         i5.close()
-        del i1
-        del i2
-        del i3
-        del i4
-        del i5
         buff = BytesIO()
         img.save(buff, "png")
         buff.seek(0)
+        img.close()
         return buff
 
 

@@ -18,6 +18,7 @@ class _staff(commands.Cog):
         await inter.edit_original_message(
             f"Successfully added the card with ID: {id}!")
         await pic.save(f"./pics/{id}.png") #type:ignore
+        await pic.save(f"/var/www/html/hanknyeon/pics/{id}.png")
         self.bot.data[id] = {"name": name, "rarity": rarity, "group": group}
         await self.bot.add_card_data(name, group, rarity, id, limit=limited_days)
 

@@ -109,7 +109,7 @@ class Currency(commands.Cog):
         price = self.prices[dt['rarity']]
         emb = discord.Embed(title="Are you sure you want to buy this card?", description=f"{dt['group']} **{dt['name']}**\n**Card ID: **{id}\n{self.bot.rare[dt['rarity']]}\n**Price: **{format(price, ',')}", color=self.bot.get_color())
         emb.set_author(name=str(inter.author), icon_url=inter.author.avatar.url)
-        emb.set_image(file=discord.File(f"pics/{id}.png", "image.png"))
+        emb.set_image(url=f"https://haknyeon.info/topsecret/card?id={id.replace('#', 'h')}")
         await inter.send(embed=emb, view=v)
         await v.wait()
         if v.value == False:
@@ -138,7 +138,7 @@ class Currency(commands.Cog):
         price = int(str(self.prices[dt['rarity']])[:-1])
         emb = discord.Embed(title="Are you sure you want to sell this card?", description=f"{dt['group']} **{dt['name']}**\n**Card ID: **{id}\n{self.bot.rare[dt['rarity']]}\n**Selling Price: **{format(price, ',')}", color=self.bot.get_color())
         emb.set_author(name=str(inter.author), icon_url=inter.author.avatar.url)
-        emb.set_image(file=discord.File(f"pics/{id}.png", "image.png"))
+        emb.set_image(url=f"https://haknyeon.info/topsecret/card?id={id.replace('#', 'h')}")
         await inter.send(embed=emb, view=v)
         await v.wait()
         if v.value == False:
