@@ -3,7 +3,7 @@ import random
 
 class MineButton(discord.ui.Button):
     def __init__(self, label, x, y):
-        super().__init__(style = discord.ButtonStyle.blurple, label=" ", row=x)
+        super().__init__(style = discord.ButtonStyle.blurple, label="\u200b", row=x)
         self.x = x
         self.y = y
         self.r = label
@@ -14,7 +14,7 @@ class MineButton(discord.ui.Button):
         if inter.author != v.user:
             return await inter.send("This isn't your game!", ephemeral=True)
         v.board[self.x][self.y] = self.r
-        self.label = self.r if self.r else " "
+        self.label = self.r if self.r else "\u200b"
         self.disabled = True
         self.clicked = True
         if not self.r:
@@ -58,7 +58,7 @@ class MineView(discord.ui.View):
                     for bx, by in neigh:
                         self.board[x][y] = " "  #type:ignore
                         butt : MineButton = self[bx, by] # type: ignore
-                        butt.label = str(self.board[bx][by]) if butt.r else " "
+                        butt.label = str(self.board[bx][by]) if butt.r else "\u200b"
                         butt.disabled = True
                         butt.clicked = True
                         self.clear()
@@ -90,7 +90,7 @@ class MineView(discord.ui.View):
             child.disabled  = True  
             child.label = child.r
             if child.r == 0:       
-                child.label = " "  
+                child.label = "\u200b"  
             if child.r == "💥":
                 child.style = discord.ButtonStyle.red if error else discord.ButtonStyle.green
 

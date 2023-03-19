@@ -2,11 +2,32 @@ import disnake as discord
 from disnake.ext import commands
 from db import Hanknyeon
 from views import SelectPages, Menu, ConfirmView
+import traceback
 
 
 class Folder(commands.Cog):
     def __init__(self, bot:Hanknyeon):
         self.bot = bot
+
+
+    async def cog_command_error(self, inter: commands.Context, error: Exception) -> None:
+        if isinstance(error, commands.CommandOnCooldown):
+            time = error.cooldown.get_retry_after()
+            embed = discord.Embed(title="This command is on cooldown", description=f"Try using this command after {self.bot.sort_time(int(time))}.", color=discord.Color.red())
+            embed.set_author(name=str(inter.author), icon_url=inter.author.avatar.url) #type:ignore
+            await inter.send(embed=embed)
+        else:
+            etype = type(error)
+            trace = error.__traceback__
+            lines = traceback.format_exception(etype, error, trace)
+            traceback_text = ''.join(lines)
+            ch = self.bot.get_channel(1085272060986654831)
+            await ch.send(f"```py\n{traceback_text}\n```")
+            wee_embed = discord.Embed(title="We ran into an unexpected error...", description="If this problem persists, report this on our [support server](https://discord.gg/haknyeon/)", color=self.bot.get_color())
+            try:
+                await inter.reponse.send_message(embed=wee_embed)
+            except:
+                await inter.followup.send(embed=wee_embed)
 
 
     def convert_name(self, name, r):
@@ -125,9 +146,37 @@ class Folder(commands.Cog):
     async def n_auto(self, inter, input):
         r = await self.bot.folder(inter.author.id, get=True)
         return [name.split(" ")[1] for name in r.keys() if input in name][:25]
+    
 
-    @folder.sub_command(description="Add cards to a folder!")
-    async def add_cards(self, inter, folder):
+    @folder.sub_command(description="Add a single card into a folder!")
+    async def add_card(self, inter, folder, card):       
+        r2 = await self.bot.folder(inter.author.id, get=True)
+        folder = self.convert_name(folder, r2) 
+        if card not in r2[folder]:
+            await inter.send(f"Successfully added {card} (**{self.bot.data[card]['group']}** {self.bot.data[card]['name']}) to your folder: **{folder}**!")
+            await self.bot.folder(inter.author.id, name=folder, add=True, ids=[card])
+        else:
+            await inter.send(f"The selected card (**{card}**) is already in the folder (**{folder}**)!", ephemeral=True)
+
+
+    @add_card.autocomplete("folder")
+    async def n_auto3(self, inter, input):
+        r = await self.bot.folder(inter.author.id, get=True)
+        return [name.split(" ")[1] for name in r.keys() if input in name or input==""][:25]
+    
+
+    @add_card.autocomplete("card")
+    async def getidfav2(self, inter, input: str):
+        r = await self.bot.get_inventory(inter.author.id, limit=input.upper())
+        if not r:
+           return [id for id in ["Nothing found"]]
+        else:
+            ids = [str(card[0].split(" ")[0]) for card in r]
+            return [id for id in ids][:25]
+
+
+    @folder.sub_command(description="Add a large amount of cards into a folder! A bit complicated than /folder add_cards")
+    async def add_bulk_cards(self, inter, folder):
         r = await self.bot.get_inventory(inter.author.id)
         r2 = await self.bot.folder(inter.author.id, get=True)
         folder = self.convert_name(folder, r2)
@@ -145,14 +194,41 @@ class Folder(commands.Cog):
             await inter.edit_original_message(embed=discord.Embed(description="<:HN_X:1035085573104345098> You cancelled this process!", color=self.bot.get_color()), view=None)
 
 
-    @add_cards.autocomplete("folder")
+    @add_bulk_cards.autocomplete("folder")
     async def n_auto2(self, inter, input):
         r = await self.bot.folder(inter.author.id, get=True)
         return [name.split(" ")[1] for name in r.keys() if input in name][:25]
     
 
-    @folder.sub_command(description="Remove cards from a folder!")
-    async def remove_cards(self, inter, folder):
+    @folder.sub_command(description="Removes a single card from a folder!")
+    async def remove_card(self, inter, folder, card):
+        r2 = await self.bot.folder(inter.author.id, get=True)
+        folder = self.convert_name(folder, r2) 
+        if card in r2[folder]:
+            await inter.send(f"Successfully removed {card} (**{self.bot.data[card]['group']}** {self.bot.data[card]['name']}) from your folder: **{folder}**!")
+            await self.bot.folder(inter.author.id, name=folder, delete=True, ids=[card])
+        else:
+            await inter.send(f"The selected card (**{card}**) is not in the folder (**{folder}**)!", ephemeral=True)
+    
+
+    @remove_card.autocomplete("folder")
+    async def n_auto4(self, inter, input):
+        r = await self.bot.folder(inter.author.id, get=True)
+        return [name.split(" ")[1] for name in r.keys() if input in name][:25]
+    
+
+    @remove_card.autocomplete("card")
+    async def getidfav3(self, inter, input: str):
+        r = await self.bot.get_inventory(inter.author.id, limit=input.upper())
+        if not r:
+           return [id for id in ["Nothing found"]]
+        else:
+            ids = [str(card[0].split(" ")[0]) for card in r]
+            return [id for id in ids][:25] 
+
+
+    @folder.sub_command(description="Removes a large amount of cards from a folder! A bit complicated than /folder remove_cards")
+    async def remove_bulk_cards(self, inter, folder):
         r2 = await self.bot.folder(inter.author.id, get=True)
         folder = self.convert_name(folder, r2)
         ids = r2[folder]
@@ -166,7 +242,7 @@ class Folder(commands.Cog):
             await inter.edit_original_message(embed=discord.Embed(description="<:HN_X:1035085573104345098> You cancelled this process!", color=self.bot.get_color()), view=None)
 
 
-    @remove_cards.autocomplete("folder")
+    @remove_bulk_cards.autocomplete("folder")
     async def n_auto3(self, inter, input):
         r = await self.bot.folder(inter.author.id, get=True)
         return [name.split(" ")[1] for name in r.keys() if input in name][:25]

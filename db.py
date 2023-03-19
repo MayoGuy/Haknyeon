@@ -4,6 +4,9 @@ import disnake
 import random
 from datetime import date, datetime , timedelta
 import os
+import topgg
+from PIL import Image
+from io import BytesIO
 
 
 intents = disnake.Intents.default()
@@ -13,18 +16,23 @@ intents.members = False
 class Hanknyeon(commands.AutoShardedBot):
     def __init__(self):
         super().__init__(
-            command_prefix=commands.when_mentioned_or(".."),
-            status=disnake.Status.idle,
-            activity=disnake.Game("THE BOYZ - MAVERICK"),
+            command_prefix=commands.when_mentioned,
+            activity=disnake.Game(name="THE BOYZ - MAVERICK"),
+            status=disnake.Status.dnd,
             intents=intents
         ) 
-        self.conn: asyncpg.Connection = None   #type:ignore
-        self.curr: asyncpg.Connection = None   #type:ignore
+        credentials1 = {"user": "postgres", "password": "haknyeon", "database": "main", "host": "localhost"}
+        self.conn = self.loop.run_until_complete(asyncpg.create_pool(**credentials1, max_inactive_connection_lifetime=10))
+        credentials2 = {"user": "postgres", "password": "haknyeon", "database": "currency", "host": "localhost"}
+        self.curr = self.loop.run_until_complete(asyncpg.create_pool(**credentials2, max_inactive_connection_lifetime=10))
         self.card_cd = {}
         self.petal = "<:HN_Petals:1033787290708889611>"
         self.owner_id = 756018524413100114
         self.data = {}
+        self.voted = {}
+        self.topggpy: topgg.DBLClient
         self.deleted = []
+        self.curr_boosts = {}
         self.rare = {
             1:"\u273F\u2740\u2740\u2740\u2740",
             2:"\u273F\u273F\u2740\u2740\u2740",
@@ -53,15 +61,15 @@ class Hanknyeon(commands.AutoShardedBot):
         added = False
         conn = await self.conn.acquire()
         async with conn.transaction():
-                for cards in r:
-                    c = cards['cards'][:8]
-                    if c == card:
-                        card = f"{card} {int(cards['cards'][9:])+1}"
-                        await self.conn.execute("UPDATE CARDS SET cards=$1 WHERE user_id=$2 AND cards=$3", card, user_id, cards['cards'])
-                        added = True
-                if not added:
-                    card = card + " 1"
-                    await self.conn.execute("INSERT INTO CARDS(user_id, cards) VALUES($1,$2)", user_id, card)
+            for cards in r:
+                c = cards['cards'].split(" ")[0]
+                if c == card:
+                    added = True
+                    card = f"{card} {int(cards['cards'].split(' ')[1])+1}"
+                    await self.conn.execute("UPDATE CARDS SET cards=$1 WHERE user_id=$2 AND cards=$3", card, user_id, cards['cards'])
+            if not added:
+                card = card + " 1"
+                await self.conn.execute("INSERT INTO CARDS(user_id, cards) VALUES($1,$2)", user_id, card)
         await self.conn.release(conn)
 
 
@@ -81,11 +89,20 @@ class Hanknyeon(commands.AutoShardedBot):
         h, m = divmod(m, 60)
         d, h = divmod(h, 24)
         w, d = divmod(d, 7)
-        time_dict = {int(w):" week", int(d):" day", int(h):" hour", int(m):" minute", int(s):" second"}
+        time_dict = {int(w):"week", int(d):"day", int(h):"hour", int(m):"minute", int(s):"second"}
         for item in time_dict.keys():
             if int(item) > 1:
                 time_dict[item] = time_dict[item] + "s"
-        return " ".join(str(i) + k for i, k in time_dict.items() if i!=0)
+        time_s = ""
+        for i, k in time_dict.items():
+            if i != 0:
+                if len(time_dict) > 1 and k in ("second", "seconds"):
+                    time_s += f"and `{i}` {k}"
+                elif k in ("second", "seconds"):
+                    time_s += f"`{i}` {k}"
+                else:
+                    time_s += f"`{i}` {k}, "
+        return time_s
     
 
     async def get_cards_data(self):
@@ -115,7 +132,7 @@ class Hanknyeon(commands.AutoShardedBot):
                 await self.conn.execute(query)
                 await self.conn.execute("DELETE FROM folder WHERE id=$1", id)
                 os.remove(f"pics/{id}.png")
-            self.data.pop(id)
+                self.data.pop(id)
         await self.conn.release(conn)
 
 
@@ -202,11 +219,14 @@ class Hanknyeon(commands.AutoShardedBot):
         conn = await self.curr.acquire()
         async with conn.transaction():
             if set:
-                streak_lis = [125, 250, 375, 500, 625, 850, 1000]
+                streak = streak + 1
+                new_coins = streak*100 if streak else 100
+                if streak > 15:
+                    new_coins = 1500
                 tmstmp = datetime.now().timestamp()
-                await self.curr.execute("UPDATE profile SET coins=$1, daily_streak=$2, daily_dt=$3 WHERE user_id=$4", streak_lis[streak]+r["coins"], streak + 1, tmstmp, user_id)
+                await self.curr.execute("UPDATE profile SET coins=$1, daily_streak=$2, daily_dt=$3 WHERE user_id=$4", new_coins+r["coins"], streak, tmstmp, user_id)
         await self.curr.release(conn)
-        return streak_lis[streak]
+        return new_coins
 
 
     async def folder(self, user_id, name=None, get=False, add=False, ids=None, delete=False):
@@ -238,20 +258,21 @@ class Hanknyeon(commands.AutoShardedBot):
         await self.conn.release(conn)
 
     
-    async def binder(self, user_id, ids=None, get=False, n=False):
-        r = await self.curr.fetchrow("SELECT * FROM binder WHERE user_id=$1", user_id)
+    async def binder(self, user_id, ids=None, get=False, n=False, name=None):
+        r = await self.curr.fetch("SELECT * FROM binder WHERE user_id=$1", user_id)
         if get:
-            return None if not r else r["user_id"], r["card"]
+            if not r:
+                return None 
+            else:
+                return r
         conn = await self.curr.acquire()
         async with conn.transaction():
-            
             if n:
-                await self.curr.release(conn)
-                await self.curr.execute("INSERT INTO binder(user_id, card) VALUES($1, $2)", user_id, "n")
+                await self.curr.execute("INSERT INTO binder(user_id, card, name) VALUES($1, $2, $3)", user_id, "n", name)
             elif r:
-                await self.curr.execute("UPDATE binder SET card=$1 WHERE user_id=$2", " ".join(ids), user_id)
+                await self.curr.execute("UPDATE binder SET card=$1 WHERE user_id=$2 AND name=$3", " ".join(ids), user_id, name)
             else:
-                await self.curr.execute("INSERT INTO binder(user_id, card) VALUES($1, $2)", user_id, " ".join(ids))
+                await self.curr.execute("INSERT INTO binder(user_id, card, name) VALUES($1, $2, $3)", user_id, " ".join(ids), name)
         await self.curr.release(conn)
 
 
@@ -276,4 +297,115 @@ class Hanknyeon(commands.AutoShardedBot):
                         self.chats.remove(list(comm)[0])
                     self.chats.append(channel.id)
             await self.curr.release(conn)
+
+    
+    async def vote(self, user_id:int, claim=True):
+        conn = await self.curr.acquire()
+        async with conn.transaction():
+            r = await self.curr.fetchrow("SELECT datee FROM votes WHERE user_id=$1", int(user_id))
+            if r:
+                if claim:
+                    await self.curr.execute("UPDATE votes SET datee=$1, claim=$2 WHERE user_id=$3", int(datetime.utcnow().timestamp()), True, int(user_id))
+                else:
+                    await self.curr.execute("UPDATE votes SET claim=$1, clam_datee=$2 WHERE user_id=$3", False, int(datetime.utcnow().timestamp()), int(user_id))
+            else:
+                l = datetime.utcnow() - timedelta(days=1)
+                await self.curr.execute("INSERT INTO votes(user_id, datee, claim, clam_datee) VALUES($1, $2, $3, $4)", int(user_id), int(datetime.utcnow().timestamp()), claim, int(l.timestamp()))
+        await self.curr.release(conn)
                         
+    
+    async def get_votees(self):
+        r = await self.curr.fetch("SELECT * FROM votes")
+        for l in r:
+            if int(datetime.utcnow().timestamp()) - l[3] < 2400:
+                self.voted[int(l[0])] = l[3]
+
+
+    async def get_boosters(self, user_id):
+        r = await self.curr.fetch("SELECT * FROM boosters WHERE user_id=$1", user_id)
+        return r
+    
+    async def edit_booster(self, user_id, item, remove=False, bought=True):
+        if remove:
+            bought = False
+        conn = await self.curr.acquire()
+        async with conn.transaction():
+            r = await self.get_boosters(user_id)
+            row = None
+            for l in r:
+                if l["item"] == item:
+                    row = l
+            if not row:
+                if bought:
+                    await self.curr.execute("INSERT INTO boosters(user_id, item, quantity, bought) VALUES($1, $2, $3, $4)", user_id, item, 1, datetime.now())
+                else:
+                    await self.curr.execute("INSERT INTO boosters(user_id, item, quantity) VALUES($1, $2, $3)", user_id, item, 1)
+            else:
+                if not remove:
+                    q = row["quantity"]+1
+                else:
+                    q = row["quantity"]-1
+                if bought:
+                    await self.curr.execute("UPDATE boosters SET quantity=$1, bought=$2 WHERE user_id=$3 AND item=$4", q, datetime.now(), user_id, item)
+                else:
+                    await self.curr.execute("UPDATE boosters SET quantity=$1 WHERE user_id=$2 AND item=$3", q, user_id, item)
+        await self.curr.release(conn)
+
+
+    async def get_boosts(self):
+        r = await self.curr.fetch("SELECT * FROM curr_boosts")
+        for l in r:
+            self.curr_boosts[l["user_id"]] = {"item":l["item"], "start":l["start"]}
+
+
+    async def add_boosts(self, user_id, item, remove=False):
+        conn = await self.curr.acquire()
+        async with conn.transaction():
+            if not remove:
+                start = datetime.now()
+                await self.curr.execute("INSERT INTO curr_boosts(user_id, item, start) VALUES($1, $2, $3)", user_id, item, start)
+                self.curr_boosts[user_id] = {"item":item, "start":start}
+            else:
+                await self.curr.execute("DELETE FROM curr_boosts WHERE user_id=$1 AND item=$2", user_id, item)
+        await self.curr.release(conn)   
+
+
+    def create(self, q, w, e):
+        img = img = Image.new("RGBA", (2460, 1100), (0, 0, 0, 0))
+        x = 0
+        for i in (q, w, e):
+            with Image.open(f"pics/{i}") as im:
+                im = im.convert("RGBA")
+                img.paste(im, (x, 0), im)
+                x += 820
+        buff = BytesIO()
+        img.save(buff, "png", optimize=80)
+        buff.seek(0)
+        img.close()
+        del img
+        return buff
+    
+
+    def create_b(self, q, w, e, r, t):
+        i1 = Image.open(f"pics/{q}").convert("RGBA")
+        i2 = Image.open(f"pics/{w}").convert("RGBA")
+        i3 = Image.open(f"pics/{e}").convert("RGBA")
+        i4 = Image.open(f"pics/{r}").convert("RGBA")
+        i5 = Image.open(f"pics/{t}").convert("RGBA")
+        img = Image.new("RGBA", (2460, 2210), (0, 0, 0, 0))
+        img.paste(i1, (0, 0), i1)
+        img.paste(i2, (820, 0), i2)
+        img.paste(i3, (1640, 0), i3)
+        img.paste(i4, (410, 1110), i4)
+        img.paste(i5, (1230, 1110), i5)
+        i1.close()
+        i2.close()
+        i3.close()
+        i4.close()
+        i5.close()
+        buff = BytesIO()
+        img.save(buff, "png")
+        buff.seek(0)
+        img.close()
+        return buff
+            

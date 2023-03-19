@@ -16,9 +16,10 @@ class CardButton(discord.ui.Button):
         self.view: CardsView
         try:
             tm = time.time() - self.view.bot.card_cd[inter.author.id] #type:ignore
-            if tm < 300:
-                await inter.send(f"You need to wait {self.view.bot.sort_time(300-tm)} before claiming a card!", ephemeral=True)  #type:ignore
-                return
+            if inter.author.id not in list(self.view.bot.voted.keys()):
+                if tm < 300:
+                    await inter.send(f"You need to wait {self.view.bot.sort_time(300-tm)} before claiming a card!", ephemeral=True)  #type:ignore
+                    return
         except KeyError:
             pass
         if inter.author==self.claimed or (inter.author in self.view.clicked):  #type:ignore
@@ -31,6 +32,7 @@ class CardButton(discord.ui.Button):
             if self.claimed in self.view.clicked:
                 self.view.clicked.remove(self.claimed)
                 self.view.bot.card_cd.pop(self.claimed.id)
+                await self.view.bot.remove_cards(self.claimed.id, self.card)
             self.view.bot.card_cd[inter.author.id] = time.time()
             self.claimed = inter.author
             await self.view.bot.insert_card(inter.author.id, self.card)  #type:ignore

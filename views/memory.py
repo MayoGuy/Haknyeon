@@ -5,7 +5,7 @@ import asyncio
 
 class MemoryButton(discord.ui.Button):
     def __init__(self, emoji):
-        super().__init__(style=discord.ButtonStyle.blurple, label=" ")
+        super().__init__(style=discord.ButtonStyle.blurple, label="\u200b")
         self.emoj = emoji[:-1]
         self.value = emoji
         self.closed = False
@@ -32,9 +32,9 @@ class MemoryButton(discord.ui.Button):
                 await inter.response.edit_message(view=view)
                 await asyncio.sleep(2)
                 self.emoji = None
-                self.label = " "
+                self.label = "\u200b"
                 view.prev.emoji = None
-                view.prev.label = " "
+                view.prev.label = "\u200b"
                 view.enable_all()
                 await inter.edit_original_message(view=view)
             else:

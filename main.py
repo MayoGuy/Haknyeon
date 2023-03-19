@@ -7,20 +7,44 @@ import traceback
 import asyncio
 from pathlib import Path
 import aiohttp
+import logging
 import asyncpg
 import random
+import psutil
+import topgg
+from logging.handlers import RotatingFileHandler
 
 
-intents = disnake.Intents.all()
+my_handler = RotatingFileHandler('disnake.log', mode='a', maxBytes=10*1024*1024, backupCount=2, encoding=None, delay=0)
+logger = logging.getLogger('disnake')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='disnake.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
+logger.addHandler(my_handler)
+
+TOKEN = ""
+TOKEN_BOT = ""
+
 bot = Hanknyeon()
+topgg_webhook = topgg.WebhookManager(bot).dbl_webhook("/topgg", "D51yE_39@E")
+bot.topggpy = topgg.DBLClient(bot, TOKEN, autopost=True, post_shard_count=True)
+
+
+@bot.event
+async def on_autopost_success():
+    print(
+        f"Posted server count ({bot.topggpy.guild_count}), shard count ({bot.shard_count})"
+    )
+
 
 async def run():
-    credentials1 = {"user": "user", "password": "pass", "database": "main", "host": "localhost"}
-    bot.conn = await asyncpg.create_pool(**credentials1, max_inactive_connection_lifetime=10)
-    credentials2 = {"user": "user", "password": "pass", "database": "currency", "host": "localhost"}
-    bot.curr = await asyncpg.create_pool(**credentials2, max_inactive_connection_lifetime=3)
+    await bot.get_cards_data()
+    await bot.get_votees()
+    await bot.get_boosts()
+    bot.chats = await bot.chat(get=True)
     try:
-        await bot.start("TOKEN")
+        await bot.start(TOKEN_BOT)
     except KeyboardInterrupt:
         await bot.conn.close()
         await bot.curr.close()
@@ -30,11 +54,20 @@ async def run():
 @bot.event
 async def on_ready():
     print("I'm Alive")
-    await bot.get_cards_data()
-    bot.chats = await bot.chat(get=True)
-    check_limit.start()
-    change_status.start()
+    await topgg_webhook.run(5000)
     print(len(bot.data.keys()))
+
+
+@bot.event
+async def on_dbl_vote(data: topgg.types.BotVoteData):
+    print(f"Received a vote:\n{data}")
+    await bot.vote(data.user)
+
+
+@bot.event
+async def on_slash_command(inter):
+    ch = bot.get_channel(1064903053100208158)
+    await ch.send(f"**/{inter.application_command.name}** - {psutil.virtual_memory()[2]}% - {psutil.virtual_memory()[3]/1000000000} GB")
 
 
 @bot.event
@@ -53,7 +86,19 @@ async def on_slash_command_error(inter, error):
     elif isinstance(error, disnake.errors.HTTPException):
         print(str(error))
     else:
-        raise error
+        etype = type(error)
+        trace = error.__traceback__
+        lines = traceback.format_exception(etype, error, trace)
+        traceback_text = ''.join(lines)
+        ch = bot.get_channel(1085272060986654831)
+        await ch.send(f"```py\n{traceback_text}\n```")
+        wee_embed = disnake.Embed(title="We ran into an unexpected error...", description="If this problem persists, report this on our [support server](https://discord.gg/haknyeon/)", color=bot.get_color())
+        try:
+            await inter.response.send_message(embed=wee_embed, ephemeral=True)
+        except:
+            await inter.followup.send(embed=wee_embed, ephemeral=True)
+
+
 
 
 @bot.event
@@ -95,11 +140,6 @@ async def on_message(msg: disnake.Message):
 
 
 @tasks.loop(minutes=10)
-async def change_status():
-    await bot.change_presence(activity=disnake.Game(name=f"THE BOYZ - MAVERICK | {len(bot.guilds)} servers"))
-
-
-@tasks.loop(seconds=2)
 async def check_limit():
     limited_cards = await bot.limited_cards()
     for r in limited_cards:
@@ -108,6 +148,24 @@ async def check_limit():
         if str(date.today()) >= dated:
             await bot.delete_card(card, limit=True)
             print("done dana done")
+
+
+@tasks.loop(minutes=10)
+async def insert_guilds():
+    conn = await bot.curr.acquire()
+    async with conn.transaction():
+        await conn.execute("UPDATE guilds SET n_g=$1 WHERE gss='gs'", len(bot.guilds))
+    await bot.curr.release(conn)
+
+
+@check_limit.before_loop
+async def before_check():
+    await bot.wait_until_ready()
+
+
+@insert_guilds.before_loop
+async def before_guilds():
+    await bot.wait_until_ready()
 
         
 for file in Path('cogs').glob('**/*.py'):
@@ -119,10 +177,13 @@ for file in Path('cogs').glob('**/*.py'):
     except Exception as e:
         traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
 
-        
-
 
 bot.load_extension("jishaku")
+
+
+insert_guilds.start()
+check_limit.start()
+
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(run())

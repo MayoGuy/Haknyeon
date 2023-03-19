@@ -26,11 +26,13 @@ class MenuSelect(discord.ui.Select):
             self.view.confirm.disabled = False
             self.view.next_page.disabled = True
             self.view.prev_page.disabled = True
-        await inter.response.edit_message(embed=discord.Embed(title="Binder Creation", description=f"**Selected Cards: **\n-" + "\n-".join(id for id in self.view.selected_ids), color=0xfcb8b8), view=self.view)
+        emb = discord.Embed(title="Binder Creation", description=f"**Selected Cards: **\n-" + "\n-".join(id for id in self.view.selected_ids), color=0xfcb8b8)
+        emb.set_footer(text="Use the buttons below to go through other cards. 25 at a time.")
+        await inter.response.edit_message(embed=emb, view=self.view)
 
 
 class SelectPages(discord.ui.View):
-    def __init__(self, ids):
+    def __init__(self, ids, edit=False):
         super().__init__(timeout=60)
         self.ids = ids
         self.index = 0
@@ -43,7 +45,8 @@ class SelectPages(discord.ui.View):
                     nl.remove(n)
             self.selects.append(MenuSelect(nl))
         self.add_item(self.selects[0])
-        self.confirm.disabled = True
+        if not edit:
+            self.confirm.disabled = True
         self._update_state()
 
 
