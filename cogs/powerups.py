@@ -75,8 +75,8 @@ class Powerups(commands.Cog):
         avail = False
         for l in r:
             if l['item'] == d[item]:
-                break
-        if not l:
+                avail = l
+        if not avail:
             return await inter.send(f"You don't own any {item}s!", ephemeral=True)
         if l['quantity'] <= 0:
             return await inter.send(f"You don't own any {item}s!", ephemeral=True)
@@ -132,17 +132,17 @@ class Powerups(commands.Cog):
                     await self.bot.edit_booster(inter.author.id, "mp", remove=True)
                     return await inter.edit_original_message(embed=emb)
                 case "Small Boost":
-                    emb = discord.Embed(title="You used a Small Boost!", description=f"You now have a 30% chance of dropping rare cards for 1 hour!\n**Remaining Small Boosts: **{l['quantity']-1}", color=self.bot.get_color())
+                    emb = discord.Embed(title="You used a Small Boost!", description=f"You now have a 30% chance of dropping rare cards for 1 hour!\n**Remaining Small Boosts: **{avail['quantity']-1}", color=self.bot.get_color())
                     await inter.send(embed=emb)
                     await self.bot.add_boosts(inter.author.id, "sb")
                     await self.bot.edit_booster(inter.author.id, "sb", remove=True)
                 case "Normal Boost":
-                    emb = discord.Embed(title="You used a Normal Boost!", description=f"You now have a 50% chance of dropping rare cards for 1 hour!\n**Remaining Normal Boosts: **{l['quantity']-1}", color=self.bot.get_color())
+                    emb = discord.Embed(title="You used a Normal Boost!", description=f"You now have a 50% chance of dropping rare cards for 1 hour!\n**Remaining Normal Boosts: **{avail['quantity']-1}", color=self.bot.get_color())
                     await inter.send(embed=emb)
                     await self.bot.add_boosts(inter.author.id, "nb")
                     await self.bot.edit_booster(inter.author.id, "nb", remove=True)
                 case "Mega Boost":
-                    emb = discord.Embed(title="You used a Mega Boost!", description=f"You now have a 70% chance of dropping rare cards for 1 hour!\n**Remaining Mega Boosts: **{l['quantity']-1}", color=self.bot.get_color())
+                    emb = discord.Embed(title="You used a Mega Boost!", description=f"You now have a 70% chance of dropping rare cards for 1 hour!\n**Remaining Mega Boosts: **{avail['quantity']-1}", color=self.bot.get_color())
                     await inter.send(embed=emb)
                     await self.bot.add_boosts(inter.author.id, "mb")
                     await self.bot.edit_booster(inter.author.id, "mb", remove=True)
@@ -179,7 +179,7 @@ class Powerups(commands.Cog):
         elif v.value == True:
             await self.bot.remove_coins(inter.author.id, dp[item])
             await self.bot.edit_booster(inter.author.id, item)
-            await inter.edit_original_message(embed=discord.Embed(description=f"<:HN_Checkmark:1035085306346606602> You successfully bought a {d[item]}. You now have {l['quantity']} {d[item]}(s)", color=self.bot.get_color()), view=None, attachments=[])
+            await inter.edit_original_message(embed=discord.Embed(description=f"<:HN_Checkmark:1035085306346606602> You successfully bought a {d[item]}. You now have {rl['quantity']} {d[item]}(s)", color=self.bot.get_color()), view=None, attachments=[])
 
 
     @powerups.sub_command(description="Shows your current active boosts")

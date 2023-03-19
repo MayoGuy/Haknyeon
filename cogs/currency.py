@@ -60,10 +60,10 @@ class Currency(commands.Cog):
             if streak:
                 if not streak%20:
                     add = f"\n\nYou got a Mega Package! Use `/powerups use` to open it. \nNext Normal Package at {streak+10} days streak"
-                    await self.bot.add_boosts(inter.author.id, "mp")
+                    await self.bot.edit_booster(inter.author.id, "mp")
                 elif not streak%10:
                     add = f"\n\nYou got a Normal Package! Use `/powerups use` to open it. \nNext Mega Package at {streak+10} days streak"
-                    await self.bot.add_boosts(inter.author.id, "mp")
+                    await self.bot.edit_booster(inter.author.id, "np")
             cs = await self.bot.daily(inter.author.id, set=True, streak=streak-1)
             emb = discord.Embed(title="Daily Petals Claimed!", description=f"**<:HN_Gift:1034881304052899850> Petals Claimed: **{cs} {self.bot.petal}\n**<:HN_Butterfly2:1034884649912127619> Total Petals: **{format(r[2] + cs, ',')} {self.bot.petal}\n**<:HN_Butterfly:1034882795547394179> Daily Streak: **{streak}{add}\n\nCome back tomorrow to claim more petals!", color=self.bot.get_color())
             emb.set_author(name=str(inter.author), icon_url=inter.author.avatar.url) #type:ignore

@@ -1,5 +1,7 @@
 disnake
-rapptz-asqlite
+asyncpg
 pillow
 disnake-jishaku
-akinator.py
+asyncio
+topggpy
+topggpy-disnake
