@@ -235,7 +235,9 @@ class Utility(commands.Cog):
 
     @commands.slash_command(description="Vote for Haknyeon to get awesome prices!")
     async def vote(self, inter):
-        r = await self.bot.curr.fetchrow("SELECT datee, claim FROM votes WHERE user_id=$1", inter.author.id)
+        async with self.bot.curr.acquire() as conn:
+            async with conn.transaction():
+                r = await self.bot.curr.fetchrow("SELECT datee, claim FROM votes WHERE user_id=$1", inter.author.id)
         if not r:
             emb = discord.Embed(title="You have not voted for Haknyeon Yet!", description=f"Press the button to vote for Haknyeon. Use `/vote` once you have voted!\n\nBy voting, you get:\n- 200 {self.bot.petal}\n- 5 minutes `/drop` cooldown for 40 minutes.\n- No claim cooldown for 40 minutes.", color=self.bot.get_color())
             b = discord.ui.Button(label="Vote on Top.gg", url="https://top.gg/bot/1024387091834077256/vote")

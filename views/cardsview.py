@@ -68,6 +68,20 @@ class CardsView(discord.ui.View):
         )
         for item in self.children:
             claimed = item.claimed.mention if item.claimed else "No one."  # type: ignore
-            e.add_field(name=f"Card #{item.value}", value=f"<:HN_Butterfly2:1034884649912127619> {item.name}\n{self.bot.rare[item.rarity]}\n\n{claimed}")  # type: ignore
+            if item.claimed:
+                inv = await self.bot.get_inventory(item.claimed.id)
+                group = self.bot.data[item.card]["group"]
+                g_cards = []
+                tg_cards = []
+                for c in inv:
+                    if self.bot.data[c[0].split(" ")[0]]["group"] == group:
+                        g_cards.append(c[0].split(" ")[0])
+                for key, value in self.bot.data.items():
+                    if value["group"] == group:
+                        tg_cards.append(key)
+                progress = f"Group progress: {len(g_cards)}/{len(tg_cards)}"   
+            else:
+                progress = ""     
+            e.add_field(name=f"Card #{item.value}", value=f"<:HN_Butterfly2:1034884649912127619> {item.name}\n{self.bot.rare[item.rarity]}\n\n{claimed}\n{progress}")  # type: ignore
         await m.reply(embed=e)
         del emb

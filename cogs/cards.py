@@ -108,10 +108,7 @@ class Cards(commands.Cog):
             else:
                 r5 = []
             tot = (r1 + r2 + r3 + r4 + r5)
-        while True:
-            q, w, e = random.sample(tot, 3)
-            if q != w and w != e and e != q:
-                break
+        q, w, e = random.sample(tot, 3)
         buff = await self.bot.loop.run_in_executor(None, self.bot.create, q + ".png", w + ".png", e + ".png")
         q, w, e = q, w, e
         emb = discord.Embed(
@@ -128,11 +125,11 @@ class Cards(commands.Cog):
         view.inter = inter #type:ignore
         view.bot = self.bot #type:ignore
         view.emb = emb
-        view.buff = await self.bot.loop.run_in_executor(None, self.bot.create, q + ".png", w + ".png", e + ".png")
         await inter.edit_original_message(
             embed=emb,
             view=view,
         )
+        view.buff = await self.bot.loop.run_in_executor(None, self.bot.create, q + ".png", w + ".png", e + ".png")
         file.close()
         buff.close()
         del buff
@@ -328,10 +325,20 @@ class Cards(commands.Cog):
 
 
     @commands.slash_command(description="Search a card with its name and group!")
-    @commands.cooldown(1, 30, commands.BucketType.user)
-    async def search(self, inter, sort_by:str=commands.Param("Idol", choices=["Idol", "Group", "Rarity", "Era"]), group:str=None, rarity:commands.Range[1, 5]=0, idol:str=None, era:str=None):  #type: ignore
+    async def search(self, inter, sort_by:str=commands.Param("Idol", choices=["Idol", "Group", "Rarity", "Era"]), card_id:str=None, group:str=None, rarity:commands.Range[1, 5]=0, idol:str=None, era:str=None):  #type: ignore
         ids = [id for id in self.bot.data.keys()]
         data = self.bot.data
+        if card_id:
+            if card_id not in list(data.keys()):
+                return await inter.send("Given card ID was not found.", ephemeral=True)
+            emb = discord.Embed(
+                title=f"{data[card_id]['name']}",
+                description=
+                f"🌸 **Group**: {data[card_id]['group']}\n🌼 **Card ID**: {card_id}\n({rari})",
+                color=self.bot.get_color())
+            emb.set_author(name=str(inter.author), icon_url=inter.author.avatar.url) #type:ignore
+            emb.set_image(url=f"https://haknyeon.info/topsecret/card?id={card_id.replace('#', 'h')}")
+            return await inter.send(embed=emb)
         embeds = []
         if group:
             ids = [c for c in ids if data[c]["group"] == group]
@@ -430,7 +437,9 @@ class Cards(commands.Cog):
         r = await self.bot.daily(inter.author.id, get=True)
         dai_cd = datetime.now().timestamp() - r[0]  #type:ignore
         daily_cd = self.bot.sort_time(int(86400-dai_cd)) if 86400 > dai_cd > 0 else "Available!"
-        v = await self.bot.curr.fetchrow("SELECT datee, claim FROM votes WHERE user_id=$1", inter.author.id)
+        async with self.bot.curr.acquire() as conn:
+            async with conn.transaction():
+                v = await self.bot.curr.fetchrow("SELECT datee, claim FROM votes WHERE user_id=$1", inter.author.id)
         if not v:
             vote = "Available!"
         elif v[1]:
@@ -445,8 +454,10 @@ class Cards(commands.Cog):
 
     @commands.slash_command(description="Shows your progress in collecting a certain group!")
     @commands.cooldown(1, 60, commands.BucketType.user)
-    async def progress(self, inter, group):
-        inv = await self.bot.get_inventory(inter.author.id)
+    async def progress(self, inter, group, user:discord.User=None):
+        user = inter.author if not user else user
+        await inter.response.defer()
+        inv = await self.bot.get_inventory(user.id)
         g_cards = []
         tg_cards = []
         for c in inv:
@@ -493,16 +504,17 @@ class Cards(commands.Cog):
         elif pr == 100:
             per = 10
         embs = []
-        await inter.response.defer()
         r = await self.bot.loop.run_in_executor(None, self.create_progress, g_cards, tg_cards)
         embs = []
         for f in r:
             emb = discord.Embed(title=f"{group} Progress", description=f"{len(g_cards)}/{len(tg_cards)} Cards\n{progress[per]}", color=self.bot.get_color())
+            emb.set_author(name=user.display_name, icon_url=user.display_avatar)
             embs.append(emb)
         v = Menu(embs, files=r)
         v.inter = inter
         embs[0].set_image(file=discord.File(r[0], "image.png"))
         await inter.edit_original_message(embed=embs[0], view=v)
+        del r
         return
 
 

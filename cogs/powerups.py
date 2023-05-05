@@ -78,7 +78,7 @@ class Powerups(commands.Cog):
                 avail = l
         if not avail:
             return await inter.send(f"You don't own any {item}s!", ephemeral=True)
-        if l['quantity'] <= 0:
+        if avail['quantity'] <= 0:
             return await inter.send(f"You don't own any {item}s!", ephemeral=True)
         if item in ("Small Boost", "Normal Boost", "Mega Boost") and inter.author.id in list(self.bot.curr_boosts.keys()):
             return await inter.send("You already have a boost running! See `/powerups current` for more info.", ephemeral=True)
@@ -179,7 +179,11 @@ class Powerups(commands.Cog):
         elif v.value == True:
             await self.bot.remove_coins(inter.author.id, dp[item])
             await self.bot.edit_booster(inter.author.id, item)
-            await inter.edit_original_message(embed=discord.Embed(description=f"<:HN_Checkmark:1035085306346606602> You successfully bought a {d[item]}. You now have {rl['quantity']} {d[item]}(s)", color=self.bot.get_color()), view=None, attachments=[])
+            if rl:
+                qu = rl['quantity']
+            else:
+                qu = 1
+            await inter.edit_original_message(embed=discord.Embed(description=f"<:HN_Checkmark:1035085306346606602> You successfully bought a {d[item]}. You now have {qu} {d[item]}(s)", color=self.bot.get_color()), view=None, attachments=[])
 
 
     @powerups.sub_command(description="Shows your current active boosts")

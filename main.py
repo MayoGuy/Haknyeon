@@ -8,7 +8,6 @@ import asyncio
 from pathlib import Path
 import aiohttp
 import logging
-import asyncpg
 import random
 import psutil
 import topgg
@@ -25,9 +24,10 @@ logger.addHandler(my_handler)
 
 TOKEN = ""
 TOKEN_BOT = ""
+WEB_HOOK_TOKEN = ""
 
 bot = Hanknyeon()
-topgg_webhook = topgg.WebhookManager(bot).dbl_webhook("/topgg", "D51yE_39@E")
+topgg_webhook = topgg.WebhookManager(bot).dbl_webhook("/topgg", WEB_HOOK_TOKEN)
 bot.topggpy = topgg.DBLClient(bot, TOKEN, autopost=True, post_shard_count=True)
 
 
@@ -67,7 +67,7 @@ async def on_dbl_vote(data: topgg.types.BotVoteData):
 @bot.event
 async def on_slash_command(inter):
     ch = bot.get_channel(1064903053100208158)
-    await ch.send(f"**/{inter.application_command.name}** - {psutil.virtual_memory()[2]}% - {psutil.virtual_memory()[3]/1000000000} GB")
+    await ch.send(f"**/{inter.application_command.name}** - {psutil.virtual_memory()[2]}% - {psutil.virtual_memory()[3]/1000000000} GB - CPU: {psutil.cpu_percent()}%")
 
 
 @bot.event

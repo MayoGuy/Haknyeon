@@ -45,7 +45,7 @@ class Currency(commands.Cog):
                 await inter.followup.send(embed=wee_embed)
 
 
-    @commands.slash_command(description="Claim your daily petals!")
+    @commands.slash_command(description="Claim your daily Petals!")
     async def daily(self, inter: discord.ApplicationCommandInteraction):
         await inter.response.defer()
         r1 = await self.bot.get_profile(inter.author.id)
@@ -65,14 +65,14 @@ class Currency(commands.Cog):
                     add = f"\n\nYou got a Normal Package! Use `/powerups use` to open it. \nNext Mega Package at {streak+10} days streak"
                     await self.bot.edit_booster(inter.author.id, "np")
             cs = await self.bot.daily(inter.author.id, set=True, streak=streak-1)
-            emb = discord.Embed(title="Daily Petals Claimed!", description=f"**<:HN_Gift:1034881304052899850> Petals Claimed: **{cs} {self.bot.petal}\n**<:HN_Butterfly2:1034884649912127619> Total Petals: **{format(r[2] + cs, ',')} {self.bot.petal}\n**<:HN_Butterfly:1034882795547394179> Daily Streak: **{streak}{add}\n\nCome back tomorrow to claim more petals!", color=self.bot.get_color())
+            emb = discord.Embed(title="Daily Petals Claimed!", description=f"**<:HN_Gift:1034881304052899850> Petals Claimed: **{cs} {self.bot.petal}\n**<:HN_Butterfly2:1034884649912127619> Total Petals: **{format(r[2] + cs, ',')} {self.bot.petal}\n**<:HN_Butterfly:1034882795547394179> Daily Streak: **{streak}{add}\n\nCome back tomorrow to claim more Petals!", color=self.bot.get_color())
             emb.set_author(name=str(inter.author), icon_url=inter.author.avatar.url) #type:ignore
             await inter.edit_original_message(embed=emb)
         else:
-            await inter.edit_original_message(f"You need to wait {self.bot.sort_time(86400-(today-r[0]))} before claiming your daily petals!")
+            await inter.edit_original_message(f"You need to wait {self.bot.sort_time(86400-(today-r[0]))} before claiming your daily Petals!")
 
 
-    @commands.slash_command(description="Shows the amount of petals a user owns.")
+    @commands.slash_command(description="Shows the amount of Petals a user owns.")
     async def balance(self, inter, user:discord.Member=None):  #type:ignore
         user = user if user else inter.author
         r = await self.bot.get_profile(user.id)
@@ -151,8 +151,7 @@ class Currency(commands.Cog):
         return [gr for gr in groups if input.lower() in gr.lower() or input==""][:24]
 
 
-    @commands.slash_command(description="Buy a card with your petals!")
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.slash_command(description="Buy a card with your Petals!")
     async def buy(self, inter, card_id):
         id = card_id
         v = ConfirmView()
@@ -185,8 +184,7 @@ class Currency(commands.Cog):
         return [id for id in self.bot.data.keys() if (input.lower() in id.lower() or input=="") and "Special" not in self.bot.data[id]["group"]][:24]
 
 
-    @commands.slash_command(description="Sell your cards for some petals!")
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.slash_command(description="Sell your cards for some Petals!")
     async def sell(self, inter, card_id):
         id = card_id
         v = ConfirmView()
@@ -216,7 +214,7 @@ class Currency(commands.Cog):
             return [id for id in ids if input.lower() in id.lower() or input==""][:24] 
 
 
-    @commands.slash_command(description="Do a task every 2 hours to earn some petals!")
+    @commands.slash_command(description="Do a task every 2 hours to earn some Petals!")
     @commands.cooldown(1, 7200, commands.BucketType.user)
     async def task(self, inter: discord.ApplicationCommandInteraction):
         pro = await self.bot.get_profile(inter.author.id)
@@ -224,11 +222,11 @@ class Currency(commands.Cog):
         if fav_card == " ":
             return await inter.send("You need to set a favourite card to do your tasks with!", ephemeral=True)
         prompts = {
-            125: f"{self.bot.petal} You went to water your flowers in your garden and gained +125 petals!",
-            250: f"{self.bot.petal} You and **{fav_card}** went to the forest to help collect some mushrooms! Mom gave you 250+ petals for your help.",
-            375: f"{self.bot.petal} You sold some flower on the market and received +375 petals!",
-            500: f"{self.bot.petal} **{fav_card}** befriended a group of butterflies and was gifted +500 petals by them!\nHow nice~",
-            750: f"{self.bot.petal} You and **{fav_card}** participated in a flower contest and won +750 petals!"
+            125: f"{self.bot.petal} You went to water your flowers in your garden and gained +125 Petals!",
+            250: f"{self.bot.petal} You and **{fav_card}** went to the forest to help collect some mushrooms! Mom gave you 250+ Petals for your help.",
+            375: f"{self.bot.petal} You sold some flower on the market and received +375 Petals!",
+            500: f"{self.bot.petal} **{fav_card}** befriended a group of butterflies and was gifted +500 Petals by them!\nHow nice~",
+            750: f"{self.bot.petal} You and **{fav_card}** participated in a flower contest and won +750 Petals!"
         }
         coins = random.choice(list(prompts.keys()))
         emb = discord.Embed(description=prompts[coins], color=self.bot.get_color())
@@ -262,7 +260,7 @@ class Currency(commands.Cog):
         await self.bot.insert_card(user.id, card_id)
 
 
-    @gift.sub_command(description="Gift petals to your friend!")
+    @gift.sub_command(description="Gift Petals to your friend!")
     async def petals(self, inter, user:discord.User, amount:int):
         r = await self.bot.get_profile(inter.author.id)
         r2 = await self.bot.get_profile(user.id)
